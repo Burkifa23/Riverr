@@ -1,5 +1,7 @@
 /**
  * @typedef {Object} Task
+ * - A task has no parent, while a subtask does.
+ * - A task with no sub tasks will have tabs and links directly linked to it and behave as both a subtask and a task
  *
  * @property {String} id
  * @property {String} title
