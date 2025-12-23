@@ -17,6 +17,7 @@ let db = null;
 // Initialize IndexedDB connection
 async function initDB() {
 	return new Promise((resolve, reject) => {
+		indexedDB.deleteDatabase("ResearchAssistantDB"); // TODO: Remove this line after testing
 		const request = indexedDB.open("ResearchAssistantDB", 1);
 
 		request.onerror = () => reject(request.error);
@@ -35,6 +36,16 @@ async function initDB() {
 				taskStore.createIndex("lastActiveAt", "lastActiveAt", {
 					unique: false,
 				});
+			}
+
+			if (!database.objectStoreNames.contains("subTasks")) {
+				const subTaskStore = database.createObjectStore("subTasks", {
+					keyPath: "id",
+				});
+				subTaskStore.createIndex("lastActiveAt", "lastActiveAt", {
+					unique: false,
+				});
+				subTaskStore.createIndex("taskId", "taskId", { unique: false });
 			}
 
 			if (!database.objectStoreNames.contains("tabs")) {
@@ -83,9 +94,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 	// TODO: db = initDB(); instead of doing it within the initDB() function
 	await initDB();
 
-	if (details.reason === "install") {
-		await initializeExtension();
-	}
+	// if (details.reason === "install") {
+	// 	await initializeExtension();
+	// }
+	await initializeExtension();
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -263,9 +275,99 @@ async function handleMessage(message, sender) {
 			const tasks = await getAllTasksWithDetails();
 			return { tasks };
 
-		case "create_task":
-			await saveToStorage("tasks", data);
-			return { success: true, task: data };
+		case "create_note": {
+			const noteId = generateUUID();
+			const allTabs = await getAllFromStorage("tabs");
+			const allSubtasks = await getAllFromStorage("subtasks");
+			const allTasks = await getAllFromStorage("tasks");
+
+			const normalize = (url) => {
+				try {
+					const u = new URL(url);
+					return u.origin + u.pathname.replace(/\/$/, "");
+				} catch {
+					return url.split("?")[0];
+				}
+			};
+
+			const pageUrl = (data.pageUrl || "").trim();
+			const normalizedUrl = normalize(pageUrl);
+
+			// 1 Try to find the matching tab
+			let matchedTab = allTabs.find(
+				(t) => t.url && normalize(t.url) === normalizedUrl
+			);
+
+			// Fallback: check provenance relationships
+			if (!matchedTab) {
+				matchedTab = allTabs.find(
+					(t) =>
+						t.provenance?.sourceUrl &&
+						normalize(t.provenance.sourceUrl) === normalizedUrl
+				);
+			}
+
+			// 2️Infer subtask & task from the matched tab
+			let subtaskId = matchedTab?.subtaskId || null;
+			let taskId = matchedTab?.taskId || null;
+
+			// 3️ If no tab found, try guessing from active context (e.g. lastActive task)
+			if (!taskId) {
+				const recentTask = allTasks.sort(
+					(a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0)
+				)[0];
+				taskId = recentTask?.id || null;
+			}
+
+			if (!subtaskId && taskId) {
+				const relatedSubtask = allSubtasks.find(
+					(s) => s.taskId === taskId
+				);
+				subtaskId = relatedSubtask?.id || null;
+			}
+
+			// 4️ Construct the full note object
+			const note = {
+				id: noteId,
+				type: "note",
+				title: data.title || "Untitled Note",
+				content: data.content || "",
+				pageUrl,
+				pageTitle: data.pageTitle || "",
+				taskId,
+				subtaskId,
+				sourceTabId: matchedTab?.id || null,
+				linkedTabs: matchedTab ? [matchedTab.id] : [],
+				tags: [],
+				createdAt: Date.now(),
+				updatedAt: Date.now(),
+			};
+
+			// 5️ Save note and update references
+			await saveToStorage("notes", note);
+
+			// Optionally update parent structures
+			if (taskId) {
+				const task = await getFromStorage("tasks", taskId);
+				if (task) {
+					task.lastActiveAt = Date.now();
+					await saveToStorage("tasks", task);
+				}
+			}
+
+			if (subtaskId) {
+				const subtask = await getFromStorage("subtasks", subtaskId);
+				if (subtask) {
+					subtask.lastUpdated = Date.now();
+					await saveToStorage("subtasks", subtask);
+				}
+			}
+
+			console.log(
+				`Created note ${note.id} linked to task=${taskId}, subtask=${subtaskId}, tab=${matchedTab?.id}`
+			);
+			return { success: true, note };
+		}
 
 		case "create_note":
 			const noteId = generateUUID();
@@ -297,13 +399,72 @@ async function handleMessage(message, sender) {
 
 		case "get_notes_for_page": {
 			const allNotes = await getAllFromStorage("notes");
-			const pageUrl = data?.url || "";
-			// Match notes saved from the same page
-			const notesForPage = allNotes.filter(
-				(n) => n.pageUrl && n.pageUrl.startsWith(pageUrl)
-			);
+			const allTabs = await getAllFromStorage("tabs");
+
+			const pageUrl = (data?.url || "").trim();
+
+			// Normalized URL helper
+			const normalize = (url) => {
+				try {
+					const u = new URL(url);
+					return u.origin + u.pathname.replace(/\/$/, ""); // remove trailing slash
+				} catch {
+					return url.split("?")[0]; // fallback for malformed URLs
+				}
+			};
+
+			const normalizedPageUrl = normalize(pageUrl);
+
+			const notesForPage = allNotes.filter((note) => {
+				if (!note.pageUrl && !note.sourceTabId) return false;
+
+				// Direct URL match
+				const noteUrl = normalize(note.pageUrl || "");
+				if (noteUrl === normalizedPageUrl) return true;
+
+				// Fuzzy prefix/contains match
+				if (note.pageUrl?.includes(normalizedPageUrl)) return true;
+
+				// Match via sourceTabId
+				if (note.sourceTabId) {
+					const tab = allTabs.find((t) => t.id === note.sourceTabId);
+					if (tab && normalize(tab.url) === normalizedPageUrl)
+						return true;
+				}
+
+				// Match via linkedTabs
+				if (Array.isArray(note.linkedTabs)) {
+					const linkedTabMatch = note.linkedTabs.some((tabId) => {
+						const t = allTabs.find((tt) => tt.id === tabId);
+						return t && normalize(t.url) === normalizedPageUrl;
+					});
+					if (linkedTabMatch) return true;
+				}
+
+				// Match via provenance (tab’s sourceUrl)
+				const provenanceMatch = allTabs.some(
+					(t) =>
+						t.provenance?.sourceUrl &&
+						normalize(t.provenance.sourceUrl) ===
+							normalizedPageUrl &&
+						(note.sourceTabId === t.id ||
+							note.linkedTabs?.includes(t.id))
+				);
+				if (provenanceMatch) return true;
+
+				return false;
+			});
+
 			return { notes: notesForPage };
 		}
+
+		case "get_top_tasks":
+			const allTasks = await getAllFromStorage("tasks");
+			// Sort by recency or salience
+			const sorted = allTasks
+				.sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0))
+				.slice(0, 4);
+			return { topTasks: sorted };
 
 		default:
 			return { error: "Unknown action" };

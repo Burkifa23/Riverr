@@ -581,8 +581,8 @@ export class SessionLogger {
 			userAgent: navigator.userAgent,
 			language: navigator.language,
 			screenResolution: {
-				width: screen.width,
-				height: screen.height,
+				width: screen?.width || 0,
+				height: screen?.height || 0,
 			},
 		};
 	}

@@ -503,7 +503,7 @@ export async function initializeSampleData(db) {
 		}
 
 		for (const subtask of sampleSubtasks) {
-			await db.add("subtasks", subtask);
+			await db.add("subTasks", subtask);
 		}
 
 		for (const tab of sampleTabs) {

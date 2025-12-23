@@ -355,7 +355,15 @@ function renderDashboardTasks() {
 function renderRecentActivity() {
 	const container = document.getElementById("recent-activity");
 	container.innerHTML = "";
-	currentData.recentActivity.forEach((activity) => {
+
+	if (
+		!currentData.recentActivity ||
+		currentData.recentActivity.length === 0
+	) {
+		container.innerHTML = '<p class="empty-message">No recent activity</p>';
+		return;
+	}
+	currentData.recentActivity?.forEach((activity) => {
 		const el = document.createElement("div");
 		el.className = "activity-item";
 		el.innerHTML = `<span class="activity-icon">${activity.icon}</span>
@@ -412,6 +420,26 @@ function renderInbox() {
 	const container = document.getElementById("inbox-items");
 	const countBadge = document.getElementById("inbox-count");
 	container.innerHTML = "";
+
+	if (!currentData.inbox || currentData.inbox.length === 0) {
+		currentData.inbox = [
+			{
+				id: "inbox-sample",
+				title: "Inbox from iphone",
+				type: "text",
+				source: "",
+				time: Date.now(),
+			},
+			{
+				id: "inbox-sample-2",
+				title: "Voice memo from meeting",
+				type: "text",
+				source: "",
+				time: Date.now(),
+			},
+		];
+	}
+
 	countBadge.textContent = currentData.inbox.length;
 	if (currentData.inbox.length === 0) {
 		container.innerHTML = '<p class="empty-message">No items in inbox</p>';
@@ -587,16 +615,18 @@ function renderReplay() {
 // ============================================================================
 
 async function loadData() {
-	try {
-		const response = await chrome.runtime.sendMessage({
-			action: "get_workspace_state",
-		});
-		if (response && response.tasks && response.tasks.length > 0)
-			currentData = response;
-		else currentData = SAMPLE_DATA;
-	} catch (e) {
-		currentData = SAMPLE_DATA;
-	}
+	// try {
+	// 	const response = await chrome.runtime.sendMessage({
+	// 		action: "get_workspace_state",
+	// 	});
+	// 	if (response && response.tasks && response.tasks.length > 0)
+	// 		currentData = response;
+	// 	else currentData = SAMPLE_DATA;
+	// } catch (e) {
+	// 	currentData = SAMPLE_DATA;
+	// }
+
+	currentData = SAMPLE_DATA;
 	renderDashboard();
 }
 

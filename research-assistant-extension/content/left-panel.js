@@ -17,6 +17,10 @@ function setupEventListeners() {
 		chrome.runtime.sendMessage({ action: "open_workspace" });
 	});
 
+	document.getElementById("hide-panel-btn").addEventListener("click", () => {
+		parent.postMessage({ type: "HIDE_LEFT_PANEL" }, "*");
+	});
+
 	// Search
 	document
 		.getElementById("search-input")
@@ -73,6 +77,7 @@ async function loadTasks() {
 function renderTasks(tasksToRender) {
 	const container = document.getElementById("tasks-list");
 
+	console.log(tasksToRender);
 	if (!container) return;
 
 	if (tasksToRender.length === 0) {

@@ -41,8 +41,23 @@
 		state.tabId = response?.tabId;
 		state.taskId = response?.task?.id;
 
+		// TODO: have a better way to filter out non-content pages or even have an excludes list
+		// if (
+		// 	!(
+		// 		// If the current page url is youtube, email or pdf viewer, skip injection
+		// 		(
+		// 			window.location.href.includes("youtube.com") ||
+		// 			window.location.href.includes("mail.google.com") ||
+		// 			window.location.href.endsWith(".pdf")
+		// 		)
+		// 	)
+		// )
+
 		// Inject UI elements
 		await injectSalienceStrip();
+
+		await injectLeftPanel();
+
 		await loadAnnotations();
 
 		// Setup event listeners
@@ -104,17 +119,58 @@
 
 		document.body.appendChild(strip);
 
-		// Setup close button
-		document
-			.getElementById("ra-close-strip")
-			.addEventListener("click", () => {
-				strip.style.display = "none";
-				state.salienceStripOpen = false;
-			});
+		// --- Floating toggle button (top center) ---
+		const toggleBtn = document.createElement("div");
+		toggleBtn.id = "ra-salience-toggle";
+		toggleBtn.textContent = "▼";
+		toggleBtn.style.position = "fixed";
+		toggleBtn.style.top = "0";
+		toggleBtn.style.left = "50%";
+		toggleBtn.style.transform = "translate(-50%, 0)";
+		toggleBtn.style.width = "26px";
+		toggleBtn.style.height = "22px";
+		toggleBtn.style.borderRadius = "0 0 6px 6px";
+		toggleBtn.style.background =
+			"linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+		toggleBtn.style.color = "white";
+		toggleBtn.style.fontSize = "14px";
+		toggleBtn.style.display = "flex";
+		toggleBtn.style.alignItems = "center";
+		toggleBtn.style.justifyContent = "center";
+		toggleBtn.style.cursor = "pointer";
+		toggleBtn.style.zIndex = "1000000";
+		toggleBtn.style.transition = "opacity 0.3s ease";
+		toggleBtn.style.opacity = "0"; // hidden until strip hides
+		document.body.appendChild(toggleBtn);
 
+		// Setup close button
+		const closeBtn = document.getElementById("ra-close-strip");
+		closeBtn.addEventListener("click", hideStrip);
+
+		toggleBtn.addEventListener("click", showStrip);
+
+		function hideStrip() {
+			strip.style.transform = "translate(-50%, -100%)"; // slide up & out of view
+			toggleBtn.style.opacity = "1"; // show toggle button
+			state.salienceStripOpen = false;
+		}
+
+		function showStrip() {
+			strip.style.transform = "translate(-50%, 0)"; // slide back into view
+			toggleBtn.style.opacity = "0"; // hide toggle button again
+			state.salienceStripOpen = true;
+
+			// Auto-hide again after a few seconds if desired
+			setTimeout(() => {
+				if (state.salienceStripOpen) hideStrip();
+			}, 3000);
+		}
 		// Update strip periodically
 		updateSalienceStrip();
 		setInterval(updateSalienceStrip, 1000);
+
+		// Auto-show briefly, then hide after 1.5 seconds
+		setTimeout(() => hideStrip(), 1500);
 	}
 
 	async function updateSalienceStrip() {
@@ -268,6 +324,69 @@
 
 		// Show annotation menu
 		showAnnotationMenu(selection);
+	}
+
+	async function injectLeftPanel() {
+		if (document.getElementById("ra-left-panel")) return;
+
+		// --- Main iframe ---
+		const iframe = document.createElement("iframe");
+		iframe.id = "ra-left-panel";
+		iframe.src = chrome.runtime.getURL("content/left-panel.html");
+		iframe.style.position = "fixed";
+		iframe.style.top = "0";
+		iframe.style.left = "0";
+		iframe.style.width = "300px";
+		iframe.style.height = "100vh";
+		iframe.style.border = "none";
+		iframe.style.zIndex = "2147483646";
+		iframe.style.transition = "transform 0.3s ease";
+		iframe.style.transform = "translateX(0)";
+		document.body.appendChild(iframe);
+
+		// --- Utility handle button ---
+		const toggleBtn = document.createElement("div");
+		toggleBtn.id = "ra-panel-toggle";
+		toggleBtn.innerHTML = "›"; // arrow shape
+		toggleBtn.style.position = "fixed";
+		toggleBtn.style.left = "300px";
+		toggleBtn.style.top = "50%";
+		toggleBtn.style.transform = "translateY(-50%)";
+		toggleBtn.style.width = "18px";
+		toggleBtn.style.height = "50px";
+		toggleBtn.style.background = "#3B82F6";
+		toggleBtn.style.color = "white";
+		toggleBtn.style.fontSize = "16px";
+		toggleBtn.style.display = "flex";
+		toggleBtn.style.alignItems = "center";
+		toggleBtn.style.justifyContent = "center";
+		toggleBtn.style.borderTopRightRadius = "6px";
+		toggleBtn.style.borderBottomRightRadius = "6px";
+		toggleBtn.style.cursor = "pointer";
+		toggleBtn.style.zIndex = "2147483647";
+		toggleBtn.style.transition = "left 0.3s ease";
+		document.body.appendChild(toggleBtn);
+
+		let panelVisible = true;
+
+		toggleBtn.addEventListener("click", () => {
+			panelVisible = !panelVisible;
+			if (panelVisible) {
+				iframe.style.transform = "translateX(0)";
+				toggleBtn.style.left = "300px";
+				toggleBtn.innerHTML = "›";
+			} else {
+				iframe.style.transform = "translateX(-100%)";
+				toggleBtn.style.left = "0";
+				toggleBtn.innerHTML = "‹";
+			}
+		});
+
+		window.addEventListener("message", (event) => {
+			if (event.data?.type === "HIDE_LEFT_PANEL") {
+				document.getElementById("ra-panel-toggle").click();
+			}
+		});
 	}
 
 	// ============================================================================
