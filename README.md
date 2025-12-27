@@ -67,9 +67,65 @@ The Research Assistant consists of multiple interconnected components:
 5. **Word Add-in**: Integration with Microsoft Word for citation management
 6. **IndexedDB Storage**: Persistent storage for all research data
 
-See the architecture diagram above for component relationships.
 
+```mermaid
+graph TB
+    subgraph Browser["Chrome Browser"]
+        BG[Background Service Worker]
+        CS[Content Scripts]
+        WS[Workspace UI]
+        PP[Popup UI]
+        LP[Left Panel]
+        NS[Notes Sidebar]
+    end
+    
+    subgraph Storage["Data Layer"]
+        IDB[(IndexedDB)]
+        TASKS[Tasks Store]
+        NOTES[Notes Store]
+        TABS[Tabs Store]
+        SESSIONS[Sessions Store]
+    end
+    
+    subgraph Word["Microsoft Word"]
+        WA[Word Add-in]
+        TP[Task Pane]
+    end
+    
+    subgraph Web["Web Pages"]
+        PAGE[Active Page]
+        ANNOT[Annotations]
+    end
+    
+    BG -->|Store/Retrieve| IDB
+    IDB --> TASKS
+    IDB --> NOTES
+    IDB --> TABS
+    IDB --> SESSIONS
+    
+    CS -->|Inject UI| PAGE
+    CS -->|Track Events| BG
+    CS -->|Create| ANNOT
+    
+    BG -->|Messages| CS
+    BG -->|Messages| WS
+    BG -->|Messages| PP
+    
+    WS -->|Query Data| BG
+    PP -->|Actions| BG
+    LP -->|Manage Tasks| BG
+    NS -->|Save Notes| BG
+    
+    WA -.->|Sync Data| IDB
+    WA -->|Insert Citations| TP
+    
+    PAGE -->|User Interactions| CS
 
+    style BG fill:#3B82F6,color:#fff
+    style IDB fill:#10B981,color:#fff
+    style WA fill:#F59E0B,color:#fff
+    style CS fill:#8B5CF6,color:#fff
+```
 
 
 ### Chrome Extension Structure
