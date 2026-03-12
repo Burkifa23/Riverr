@@ -12,6 +12,7 @@ import { initializeSampleData } from "../lib/sample-data.js";
 const sessionLogger = new SessionLogger();
 let currentSessionId = null;
 let activeTasks = new Map();
+let globalActiveTaskId = null; 
 let db = null;
 
 // Initialize IndexedDB connection
@@ -288,12 +289,19 @@ async function handleMessage(message, sender) {
 			return { tasks };
 
 		case "get_current_task":
-            
             return { 
                 tabId: sender.tab?.id,
                 task: null
             };
 
+		case "get_active_task_id":
+            return { taskId: globalActiveTaskId };
+
+        case "set_active_task":
+            globalActiveTaskId = data.taskId;
+            console.log("Context switched. Active Task ID:", globalActiveTaskId);
+            return { success: true };
+			
 		case "create_note": {
 			const noteId = generateUUID();
 			const allTabs = await getAllFromStorage("tabs");
