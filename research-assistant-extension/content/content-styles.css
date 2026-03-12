@@ -1,4 +1,18 @@
-/* content-styles.css - Styles for injected UI elements */
+/* ============================================================================
+   GLOBAL THEME PALETTE (Taste Skill Edition)
+   ============================================================================ */
+:root {
+    --ra-bg-primary: rgba(28, 28, 30, 0.85); /* Translucent Dark */
+    --ra-bg-secondary: rgba(44, 44, 46, 0.9);
+    --ra-border: rgba(255, 255, 255, 0.08);
+    --ra-text-main: #EDEDED;
+    --ra-text-muted: #A1A1A6;
+    
+    /* Semantic Accents (No Purple) */
+    --ra-accent-blue: #0A84FF;
+    --ra-accent-green: #30D158;
+    --ra-accent-amber: #FFD60A;
+}
 
 /* ============================================================================
    SALIENCE STRIP (Top Center)
