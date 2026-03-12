@@ -256,40 +256,55 @@
 }
 
 /* ============================================================================
-   ANNOTATION MENU (Floating)
+   ANNOTATION MENU (Taste Skill Edition)
    ============================================================================ */
 
 .ra-annotation-menu {
-	position: absolute;
-	display: flex;
-	gap: 4px;
-	background: white;
-	border: 1px solid #e5e7eb;
-	border-radius: 8px;
-	padding: 6px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	z-index: 1000000;
-	transform: translateX(-50%);
+    position: absolute;
+    display: flex;
+    gap: 2px;
+    background: #1C1C1E; /* Deep iOS/Linear Dark */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.8);
+    z-index: 1000000;
+    transform: translateX(-50%) translateY(4px) scale(0.96);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+
+/* Class added via JS to trigger the animation */
+.ra-annotation-menu.is-visible {
+    transform: translateX(-50%) translateY(0) scale(1);
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .ra-annotation-menu button {
-	padding: 8px;
-	background: white;
-	border: 1px solid #e5e7eb;
-	border-radius: 4px;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.2s;
-	color: #6b7280;
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s ease, color 0.1s ease;
+    color: #A1A1A6; /* Subtle secondary text color */
 }
 
 .ra-annotation-menu button:hover {
-	background: #f3f4f6;
-	border-color: #3b82f6;
-	color: #3b82f6;
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
 }
+
+/* Specific Accent Colors on Hover */
+.ra-annotation-menu button[data-action="highlight"]:hover { color: #FFD60A; }
+.ra-annotation-menu button[data-action="note"]:hover { color: #30D158; }
+.ra-annotation-menu button[data-action="clip"]:hover { color: #0A84FF; }
+
 
 /* ============================================================================
    HIGHLIGHTS & ANNOTATIONS
