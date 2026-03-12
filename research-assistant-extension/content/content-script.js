@@ -509,57 +509,78 @@
 	}
 
 	function showAnnotationMenu(selection) {
-		// Remove existing menu
-		const existingMenu = document.getElementById("ra-annotation-menu");
-		if (existingMenu) existingMenu.remove();
+        // Remove existing menu instantly to prevent ghosting
+        const existingMenu = document.getElementById("ra-annotation-menu");
+        if (existingMenu) existingMenu.remove();
 
-		const range = selection.getRangeAt(0);
-		const rect = range.getBoundingClientRect();
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
 
-		const menu = document.createElement("div");
-		menu.id = "ra-annotation-menu";
-		menu.className = "ra-annotation-menu";
-		menu.style.left = `${rect.left + rect.width / 2}px`;
-		menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
-		menu.innerHTML = `
+        const menu = document.createElement("div");
+        menu.id = "ra-annotation-menu";
+        menu.className = "ra-annotation-menu"; 
+        
+        // Position it slightly higher so it floats *above* the text, not on it
+        menu.style.left = `${rect.left + rect.width / 2}px`;
+        menu.style.top = `${rect.top + window.scrollY - 45}px`; 
+        
+        menu.innerHTML = `
       <button data-action="highlight" title="Highlight">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 18H3l8-8-4-4 4-4 4 4 4-4 4 4-4 4 8 8h-9z"></path>
         </svg>
       </button>
       <button data-action="note" title="Add Note">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
         </svg>
       </button>
       <button data-action="clip" title="Save Clip">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
       </button>
     `;
 
-		document.body.appendChild(menu);
+        document.body.appendChild(menu);
 
-		// Add event listeners
-		menu.querySelectorAll("button").forEach((btn) => {
-			btn.addEventListener("click", async (e) => {
-				e.stopPropagation();
-				const action = btn.dataset.action;
-				await handleAnnotationAction(action);
-				menu.remove();
-			});
-		});
+        // Trigger the hardware-accelerated CSS animation
+        requestAnimationFrame(() => {
+            menu.classList.add('is-visible');
+        });
 
-		// Remove menu on click outside
-		setTimeout(() => {
-			document.addEventListener("click", function removeMenu() {
-				menu.remove();
-				document.removeEventListener("click", removeMenu);
-			});
-		}, 100);
-	}
+        // Add event listeners (Unchanged logic)
+        menu.querySelectorAll("button").forEach((btn) => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                // Visual feedback: briefly scale down the button
+                btn.style.transform = "scale(0.9)";
+                
+                const action = btn.dataset.action;
+                await handleAnnotationAction(action);
+                
+                // Fade out smoothly
+                menu.classList.remove('is-visible');
+                setTimeout(() => menu.remove(), 150);
+            });
+        });
+
+        // Remove menu on click outside
+        setTimeout(() => {
+            document.addEventListener("mousedown", function removeMenu(e) {
+                if (!menu.contains(e.target)) {
+                    menu.classList.remove('is-visible');
+                    setTimeout(() => menu.remove(), 150);
+                    document.removeEventListener("mousedown", removeMenu);
+                }
+            });
+        }, 50);
+    }
 
 	async function handleAnnotationAction(action) {
 		if (!state.selection) return;
