@@ -120,28 +120,36 @@
 		document.body.appendChild(strip);
 
 		// --- Floating toggle button (top center) ---
-		const toggleBtn = document.createElement("div");
-		toggleBtn.id = "ra-salience-toggle";
-		toggleBtn.textContent = "▼";
-		toggleBtn.style.position = "fixed";
-		toggleBtn.style.top = "0";
-		toggleBtn.style.left = "50%";
-		toggleBtn.style.transform = "translate(-50%, 0)";
-		toggleBtn.style.width = "26px";
-		toggleBtn.style.height = "22px";
-		toggleBtn.style.borderRadius = "0 0 6px 6px";
-		toggleBtn.style.background =
-			"linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-		toggleBtn.style.color = "white";
-		toggleBtn.style.fontSize = "14px";
-		toggleBtn.style.display = "flex";
-		toggleBtn.style.alignItems = "center";
-		toggleBtn.style.justifyContent = "center";
-		toggleBtn.style.cursor = "pointer";
-		toggleBtn.style.zIndex = "1000000";
-		toggleBtn.style.transition = "opacity 0.3s ease";
-		toggleBtn.style.opacity = "0"; // hidden until strip hides
-		document.body.appendChild(toggleBtn);
+        const toggleBtn = document.createElement("div");
+        toggleBtn.id = "ra-salience-toggle";
+        toggleBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+        toggleBtn.style.position = "fixed";
+        toggleBtn.style.top = "0";
+        toggleBtn.style.left = "50%";
+        toggleBtn.style.transform = "translate(-50%, 0)";
+        toggleBtn.style.width = "32px";
+        toggleBtn.style.height = "16px";
+        toggleBtn.style.borderRadius = "0 0 6px 6px";
+        
+        // Taste Skill Styling
+        toggleBtn.style.background = "rgba(28, 28, 30, 0.85)";
+        toggleBtn.style.backdropFilter = "blur(12px)";
+        toggleBtn.style.border = "1px solid rgba(255, 255, 255, 0.08)";
+        toggleBtn.style.borderTop = "none";
+        toggleBtn.style.color = "#A1A1A6";
+        
+        toggleBtn.style.display = "flex";
+        toggleBtn.style.alignItems = "center";
+        toggleBtn.style.justifyContent = "center";
+        toggleBtn.style.cursor = "pointer";
+        toggleBtn.style.zIndex = "1000000";
+        toggleBtn.style.transition = "opacity 0.2s ease, color 0.2s ease";
+        toggleBtn.style.opacity = "0";
+        
+        toggleBtn.onmouseenter = () => toggleBtn.style.color = "#FFF";
+        toggleBtn.onmouseleave = () => toggleBtn.style.color = "#A1A1A6";
+        
+        document.body.appendChild(toggleBtn);
 
 		// Setup close button
 		const closeBtn = document.getElementById("ra-close-strip");
